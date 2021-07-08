@@ -1,7 +1,7 @@
 <!--
  * @Date: 2021-06-24 15:57:09
  * @LastEditors: GodK
- * @LastEditTime: 2021-06-25 12:47:50
+ * @LastEditTime: 2021-07-08 18:04:03
 -->
 # GlobalPointer_pytorch
 > 喜欢本项目的话，欢迎点击右上角的star，感谢每一个点赞的你。
@@ -17,9 +17,12 @@ GlobalPointer的设计思路与[TPLinker-NER](https://github.com/gaohongkui/TPLi
 1. 加性乘性Attention
 
 TPLinker在Multi-Head上用的是加性Attention：
-$$s_α(i,j)=W_{o,α}tanh(W_{h,α}[h_i,h_j]+b_{h,α})+b_{o,α}$$
+<!-- $$s_α(i,j)=W_{o,α}tanh(W_{h,α}[h_i,h_j]+b_{h,α})+b_{o,α}$$ -->
+![](https://latex.codecogs.com/svg.image?s%20_%20%7B%20%5Calpha%20%7D%20(%20i%20,%20j%20)%20=%20W%20_%20%7B%20o%20,%20%5Calpha%20%7D%20%5Coperatorname%20%7B%20tanh%20%7D%20(%20W%20_%20%7B%20h%20,%20%5Calpha%20%7D%20%5B%20h%20_%20%7B%20i%20%7D%20,%20h%20_%20%7B%20j%20%7D%20%5D%20&plus;%20b%20_%20%7B%20h%20,%20%5Calpha%20%7D%20)%20&plus;%20b%20_%20%7B%20o%20,%20%5Calpha%20%7D)
+
 而GlobalPointer用的是乘性Attention：
-$$s_α(i,j)=q^⊤_{i,α}k_{j,α}$$
+<!-- $$s_α(i,j)=q^⊤_{i,α}k_{j,α}$$ -->
+![](https://latex.codecogs.com/svg.image?s%20_%20%7B%20%5Calpha%20%7D%20(%20i%20,%20j%20)%20=%20q%20_%20%7B%20i%20,%20%5Calpha%20%7D%20%5E%20%7B%20T%20%7D%20k%20_%20%7B%20j%20,%20%5Calpha%20%7D)
 
 2. 位置编码
 
