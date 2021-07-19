@@ -1,7 +1,7 @@
 """
 Date: 2021-06-02 00:33:09
 LastEditors: GodK
-LastEditTime: 2021-06-15 15:26:13
+LastEditTime: 2021-07-19 20:04:03
 """
 import sys
 
@@ -26,10 +26,11 @@ class MyDataset(Dataset):
 
 
 class DataMaker(object):
-    def __init__(self, tokenizer):
+    def __init__(self, tokenizer, add_special_tokens = True):
         super().__init__()
         self.tokenizer = tokenizer
-        self.preprocessor = Preprocessor(tokenizer)
+        self.add_special_tokens = add_special_tokens
+        self.preprocessor = Preprocessor(tokenizer, self.add_special_tokens)
 
     def generate_inputs(self, datas, max_seq_len, ent2id, data_type="train"):
         """生成喂入模型的数据
@@ -51,7 +52,6 @@ class DataMaker(object):
             inputs = self.tokenizer(
                 sample["text"],
                 max_length=max_seq_len,
-                add_special_tokens=False,
                 truncation=True,
                 padding='max_length'
             )

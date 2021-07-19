@@ -1,7 +1,7 @@
 """
 Date: 2021-05-31 19:50:58
 LastEditors: GodK
-LastEditTime: 2021-06-15 15:33:26
+LastEditTime: 2021-07-19 22:32:52
 """
 
 import os
@@ -44,7 +44,7 @@ else:
     if not os.path.exists(model_state_dict_dir):
         os.makedirs(model_state_dict_dir)
 
-tokenizer = BertTokenizerFast.from_pretrained(config["bert_path"], add_special_tokens=False, do_lower_case=False)
+tokenizer = BertTokenizerFast.from_pretrained(config["bert_path"], add_special_tokens=True, do_lower_case=False)
 
 
 def load_data(data_path, data_type="train"):
@@ -100,7 +100,7 @@ def data_generator(data_type="train"):
     # TODO:句子截取
     max_tok_num = 0
     for sample in all_data:
-        tokens = tokenizer.tokenize(sample["text"])
+        tokens = tokenizer(sample["text"])["input_ids"]
         max_tok_num = max(max_tok_num, len(tokens))
     assert max_tok_num <= hyper_parameters["max_seq_len"], f'数据文本最大token数量{max_tok_num}超过预设{hyper_parameters["max_seq_len"]}'
     max_seq_len = min(max_tok_num, hyper_parameters["max_seq_len"])

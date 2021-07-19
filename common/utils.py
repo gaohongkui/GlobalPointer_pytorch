@@ -1,7 +1,7 @@
 """
 Date: 2021-06-01 22:29:43
 LastEditors: GodK
-LastEditTime: 2021-06-03 17:10:04
+LastEditTime: 2021-07-19 20:00:07
 """
 import torch
 
@@ -23,9 +23,10 @@ def multilabel_categorical_crossentropy(y_pred, y_true):
 
 
 class Preprocessor(object):
-    def __init__(self, tokenizer):
+    def __init__(self, tokenizer, add_special_tokens = True):
         super(Preprocessor, self).__init__()
         self.tokenizer = tokenizer
+        self.add_special_tokens = add_special_tokens
     
     def get_ent2token_spans(self, text, entity_list):
         """实体列表转为token_spans
@@ -36,9 +37,9 @@ class Preprocessor(object):
         """
         ent2token_spans = []
         
-        inputs = self.tokenizer(text, add_special_tokens = False, return_offsets_mapping = True)
+        inputs = self.tokenizer(text, add_special_tokens = self.add_special_tokens, return_offsets_mapping = True)
         token2char_span_mapping = inputs["offset_mapping"]
-        text2tokens = self.tokenizer.tokenize(text, add_special_tokens = False)
+        text2tokens = self.tokenizer.tokenize(text, add_special_tokens = self.add_special_tokens)
 
         for ent_span in entity_list:
             ent = text[ent_span[0]:ent_span[1] + 1]

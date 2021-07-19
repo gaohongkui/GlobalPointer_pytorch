@@ -1,7 +1,7 @@
 """
 Date: 2021-06-11 13:54:00
 LastEditors: GodK
-LastEditTime: 2021-06-15 12:50:49
+LastEditTime: 2021-07-19 21:53:18
 """
 import os
 import config
@@ -24,7 +24,7 @@ config["num_workers"] = 6 if sys.platform.startswith("linux") else 0
 # for reproductivity
 torch.backends.cudnn.deterministic = True
 
-tokenizer = BertTokenizerFast.from_pretrained(config["bert_path"], add_special_tokens=False, do_lower_case=False)
+tokenizer = BertTokenizerFast.from_pretrained(config["bert_path"], add_special_tokens=True, do_lower_case=False)
 
 def load_data(data_path, data_type="test"):
     if data_type == "test":
@@ -77,7 +77,7 @@ def data_generator(data_type="test"):
 
 def decode_ent(text, pred_matrix, tokenizer, threshold = 0):
     # print(text)
-    token2char_span_mapping = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True)["offset_mapping"]
+    token2char_span_mapping = tokenizer(text, return_offsets_mapping=True)["offset_mapping"]
     id2ent = {id:ent for ent,id in ent2id.items()}
     pred_matrix = pred_matrix.cpu().numpy()
     ent_list = {}
