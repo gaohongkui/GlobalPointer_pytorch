@@ -1,14 +1,14 @@
 <!--
  * @Date: 2021-06-24 15:57:09
  * @LastEditors: GodK
- * @LastEditTime: 2021-07-08 18:04:03
+ * @LastEditTime: 2021-07-27 22:33:36
 -->
 # GlobalPointer_pytorch
 > 喜欢本项目的话，欢迎点击右上角的star，感谢每一个点赞的你。
 
 ## 项目介绍
 
-本项目的模型参考苏建林的文章[GlobalPointer：用统一的方式处理嵌套和非嵌套NER](https://kexue.fm/archives/8373)，并用Pytorch实现。
+本项目的模型参考苏剑林的文章[GlobalPointer：用统一的方式处理嵌套和非嵌套NER](https://kexue.fm/archives/8373)，并用Pytorch实现。
 
 ![GlobalPoniter多头识别嵌套实体示意图](https://kexue.fm/usr/uploads/2021/05/2377306125.png "GlobalPoniter多头识别嵌套实体示意图")
 
