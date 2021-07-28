@@ -1,7 +1,6 @@
 """
 Date: 2021-05-31 19:50:58
 LastEditors: GodK
-LastEditTime: 2021-07-27 22:48:13
 """
 
 import os
@@ -159,8 +158,9 @@ def train_step(batch_train, model, optimizer, criterion):
     optimizer.step()
 
     sample_precision = metrics.get_sample_precision(logits, batch_labels)
+    sample_f1 = metrics.get_sample_f1(logits, batch_labels)
     
-    return loss.item(), sample_precision.item()
+    return loss.item(), sample_precision.item(), sample_f1.item()
 
 
 encoder = BertModel.from_pretrained(config["bert_path"])
@@ -201,25 +201,28 @@ def train(model, dataloader, epoch):
         decay_steps = hyper_parameters["decay_steps"]
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=decay_steps, gamma=decay_rate)
 
-    total_loss, total_precision = 0., 0.
+    total_loss, total_precision, total_f1 = 0., 0., 0.
     for batch_ind, batch_data in enumerate(dataloader):
 
-        loss, precision = train_step(batch_data, model, optimizer, loss_fun)
+        loss, precision,f1 = train_step(batch_data, model, optimizer, loss_fun)
 
         total_loss += loss
         total_precision += precision
+        total_f1 += f1
 
         avg_loss = total_loss / (batch_ind + 1)
         scheduler.step()
 
         avg_precision = total_precision / (batch_ind + 1)
+        avg_f1 = total_f1 / (batch_ind + 1)
 
-        print(f'Project:{config["exp_name"]}, Epoch: {epoch+1}/{hyper_parameters["epochs"]}, Batch: {batch_ind+1}/{len(dataloader)}, loss: {avg_loss}, precision: {avg_precision}, lr: {optimizer.param_groups[0]["lr"]}')
+        print(f'Project:{config["exp_name"]}, Epoch: {epoch+1}/{hyper_parameters["epochs"]}, Batch: {batch_ind+1}/{len(dataloader)}, loss: {avg_loss}, precision: {avg_precision}, f1:{avg_f1}, lr: {optimizer.param_groups[0]["lr"]}')
         if config["logger"] == "wandb" and batch_ind % config["log_interval"] == 0:
                 logger.log({
                     "epoch": epoch,
                     "train_loss": avg_loss,
                     "train_precision": avg_precision,
+                    "train_f1": avg_f1,
                     "learning_rate": optimizer.param_groups[0]['lr'],
                 })
 
@@ -232,27 +235,29 @@ def valid_step(batch_valid, model):
                                                                                  )
     with torch.no_grad():
         logits = model(batch_input_ids, batch_attention_mask, batch_token_type_ids)
-    sample_precision = metrics.get_sample_precision(logits, batch_labels)
-    sample_f1 = metrics.get_sample_f1(logits, batch_labels)
+    sample_f1, sample_precision, sample_recall = metrics.get_evaluate_fpr(logits, batch_labels)
     
-    return sample_precision.item(), sample_f1.item()
+    return sample_f1, sample_precision, sample_recall
 
 def valid(model, dataloader):
     model.eval()
 
-    total_precision, total_f1 = 0.,0.
+    total_f1, total_precision, total_recall = 0., 0., 0.
     for batch_data in tqdm(dataloader, desc="Validating"):
-        precision, f1 = valid_step(batch_data, model)
+        f1, precision, recall = valid_step(batch_data, model)
 
-        total_precision += precision
         total_f1 += f1
-    avg_precision = total_precision / (len(dataloader))
+        total_precision += precision
+        total_recall += recall
+
     avg_f1 = total_f1 / (len(dataloader))
+    avg_precision = total_precision / (len(dataloader))
+    avg_recall = total_recall / (len(dataloader))
     print("******************************************")
-    print(f'avg_precision: {avg_precision}, avg_f1: {avg_f1}')
+    print(f'avg_precision: {avg_precision}, avg_recall: {avg_recall}, avg_f1: {avg_f1}')
     print("******************************************")
     if config["logger"] == "wandb":
-        logger.log({"valid_precision":avg_precision,"valid_f1":avg_f1})
+        logger.log({"valid_precision":avg_precision, "valid_recall":avg_recall, "valid_f1":avg_f1})
     return avg_f1
 
 if __name__ == '__main__':

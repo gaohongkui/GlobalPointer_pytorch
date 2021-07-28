@@ -1,7 +1,6 @@
 """
 Date: 2021-06-02 00:33:09
 LastEditors: GodK
-LastEditTime: 2021-07-27 22:44:25
 """
 import sys
 
@@ -114,6 +113,24 @@ class MetricsCalculator(object):
         y_pred = torch.gt(y_pred, 0).float()
         return torch.sum(y_pred[y_true == 1]) / (y_pred.sum()+1)
     
+    def get_evaluate_fpr(self, y_pred, y_true):
+        y_pred = y_pred.cpu().numpy()
+        y_true = y_true.cpu().numpy()
+        pred = []
+        true = []
+        for b, l, start, end in zip(*np.where(y_pred>0)):
+            pred.append((b, l, start, end))
+        for b, l, start, end in zip(*np.where(y_true>0)):
+            true.append((b, l, start, end))
+
+        R = set(pred)
+        T = set(true)
+        X = len(R & T)
+        Y = len(R)
+        Z = len(T)
+        f1, precision, recall = 2 * X / (Y + Z), X / Y, X / Z
+        return f1, precision, recall
+    
     
 
 
@@ -174,6 +191,12 @@ class GlobalPointer(nn.Module):
             
         # logits:(batch_size, ent_type_size, seq_len, seq_len)
         logits = torch.einsum('bmhd,bnhd->bhmn', qw, kw)
+
+        # padding mask
+        pad_mask = attention_mask.unsqueeze(1).unsqueeze(1).expand(batch_size, self.ent_type_size, seq_len, seq_len)
+        # pad_mask_h = attention_mask.unsqueeze(1).unsqueeze(-1).expand(batch_size, self.ent_type_size, seq_len, seq_len)
+        # pad_mask = pad_mask_v&pad_mask_h
+        logits = logits*pad_mask - (1-pad_mask)*1e12
 
         # 排除下三角
         mask = torch.tril(torch.ones_like(logits), -1) 
