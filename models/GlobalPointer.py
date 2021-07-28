@@ -1,7 +1,7 @@
 """
 Date: 2021-06-02 00:33:09
 LastEditors: GodK
-LastEditTime: 2021-07-19 20:04:03
+LastEditTime: 2021-07-27 22:44:25
 """
 import sys
 
@@ -110,7 +110,7 @@ class MetricsCalculator(object):
         y_pred = torch.gt(y_pred, 0).float()
         return 2 * torch.sum(y_true * y_pred) / torch.sum(y_true + y_pred)
     
-    def get_sample_accuracy(self, y_pred, y_true):
+    def get_sample_precision(self, y_pred, y_true):
         y_pred = torch.gt(y_pred, 0).float()
         return torch.sum(y_pred[y_true == 1]) / (y_pred.sum()+1)
     
