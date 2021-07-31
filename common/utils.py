@@ -1,7 +1,7 @@
 """
 Date: 2021-06-01 22:29:43
 LastEditors: GodK
-LastEditTime: 2021-07-19 20:00:07
+LastEditTime: 2021-07-31 19:30:18
 """
 import torch
 
@@ -46,26 +46,16 @@ class Preprocessor(object):
             ent2token = self.tokenizer.tokenize(ent, add_special_tokens=False)
 
             # 寻找ent的token_span
-            ent_token_len = len(ent2token)
-            token_start_index = 0 if ent_token_len > 0 else - 1
-            while token_start_index != -1:
-                try:
-                    token_start_index = text2tokens.index(ent2token[0], token_start_index)
-                    if text2tokens[token_start_index:token_start_index + ent_token_len] == ent2token:
-                        break
-                    else:
-                        token_start_index = text2tokens.index(ent2token[0], token_start_index + 1)
-                except ValueError:
-                    print(f'[{ent}] 无法对应到 [{text}] 的token_span，已丢弃')
-                    token_start_index = -1
+            token_start_indexs = [i for i,v in enumerate(text2tokens) if v==ent2token[0]]
+            token_end_indexs = [i for i,v in enumerate(text2tokens) if v==ent2token[-1]]
             
-            if token_start_index == -1:
-                continue
+            token_start_index = list(filter(lambda x:token2char_span_mapping[x][0] == ent_span[0], token_start_indexs))
+            token_end_index = list(filter(lambda x:token2char_span_mapping[x][-1]-1 == ent_span[1], token_end_indexs)) # token2char_span_mapping[x][-1]-1 减1是因为原始的char_span是闭区间，而token2char_span是开区间
 
-            # 检查token_span与原span是否对应
-            token_span = (token_start_index, token_start_index + ent_token_len - 1, ent_span[2])
-            # XXX:对[UNK]的处理不完善
-            assert '[UNK]' in ent2token or text[token2char_span_mapping[token_span[0]][0]:token2char_span_mapping[token_span[1]][1]]==ent, f'{ent}的token_span:{token_span}与原text:{text}不对应，请检查'
+            if len(token_start_index)==0 or len(token_end_index)==0:
+                print(f'[{ent}] 无法对应到 [{text}] 的token_span，已丢弃')
+                continue
+            token_span = (token_start_index[0], token_end_index[0], ent_span[2])
             ent2token_spans.append(token_span)
             
         
