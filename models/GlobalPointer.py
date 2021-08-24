@@ -204,5 +204,5 @@ class GlobalPointer(nn.Module):
         
 
         
-        return logits/self.ent_type_size**0.5
+        return logits/self.inner_dim**0.5
 
