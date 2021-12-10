@@ -170,7 +170,7 @@ model = model.to(device)
 if config["logger"] == "wandb" and config["run_type"] == "train":
     wandb.watch(model)
 
-def train(model, dataloader, epoch):
+def train(model, dataloader, epoch, optimizer):
     model.train()
 
     # loss func
@@ -185,9 +185,7 @@ def train(model, dataloader, epoch):
         loss = multilabel_categorical_crossentropy(y_true, y_pred)
         return loss
     
-    # optimizer
-    init_learning_rate = float(hyper_parameters["lr"])
-    optimizer = torch.optim.Adam(model.parameters(), lr=init_learning_rate)
+    
 
     # scheduler
     if hyper_parameters["scheduler"] == "CAWR":
@@ -263,9 +261,14 @@ def valid(model, dataloader):
 if __name__ == '__main__':
     if config["run_type"] == "train":
         train_dataloader, valid_dataloader = data_generator()
+
+        # optimizer
+        init_learning_rate = float(hyper_parameters["lr"])
+        optimizer = torch.optim.Adam(model.parameters(), lr=init_learning_rate)
+        
         max_f1 = 0.
         for epoch in range(hyper_parameters["epochs"]):
-            train(model, train_dataloader, epoch)
+            train(model, train_dataloader, epoch, optimizer)
             valid_f1 = valid(model, valid_dataloader)
             if valid_f1 > max_f1:
                 max_f1 = valid_f1
