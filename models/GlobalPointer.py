@@ -76,7 +76,8 @@ class DataMaker(object):
             all_inputs.append(sample_input)
         return all_inputs
     
-    def generate_batch(self, batch_data, data_type="train"):
+    def generate_batch(self, batch_data, max_seq_len, ent2id, data_type="train",):
+        batch_data = self.generate_inputs(batch_data, max_seq_len, ent2id, data_type)
         sample_list = []
         input_ids_list = []
         attention_mask_list = []
@@ -96,7 +97,7 @@ class DataMaker(object):
         batch_token_type_ids = torch.stack(token_type_ids_list, dim=0)
         batch_labels = torch.stack(labels_list, dim=0) if data_type!="test" else None
         
-        return (sample_list, batch_input_ids, batch_attention_mask, batch_token_type_ids, batch_labels)
+        return sample_list, batch_input_ids, batch_attention_mask, batch_token_type_ids, batch_labels
     
     def decode_ent(self, pred_matrix):
         pass

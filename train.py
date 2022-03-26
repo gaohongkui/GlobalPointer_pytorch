@@ -9,8 +9,8 @@ import sys
 import torch
 import json
 from transformers import BertTokenizerFast, BertModel
-from common.utils import Preprocessor,multilabel_categorical_crossentropy
-from models.GlobalPointer import DataMaker, MyDataset, GlobalPointer,MetricsCalculator
+from common.utils import Preprocessor, multilabel_categorical_crossentropy
+from models.GlobalPointer import DataMaker, MyDataset, GlobalPointer, MetricsCalculator
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 import glob
@@ -31,7 +31,7 @@ torch.backends.cudnn.deterministic = True
 
 if config["logger"] == "wandb" and config["run_type"] == "train":
     # init wandb
-    wandb.init(project="GlobalPointer_"+config["exp_name"],
+    wandb.init(project="GlobalPointer_" + config["exp_name"],
                config=hyper_parameters  # Initialize config
                )
     wandb.run.name = config["run_name"] + "_" + wandb.run.id
@@ -39,7 +39,8 @@ if config["logger"] == "wandb" and config["run_type"] == "train":
     model_state_dict_dir = wandb.run.dir
     logger = wandb
 else:
-    model_state_dict_dir = os.path.join(config["path_to_save_model"],config["exp_name"],time.strftime("%Y-%m-%d_%H:%M:%S",time.gmtime()))
+    model_state_dict_dir = os.path.join(config["path_to_save_model"], config["exp_name"],
+                                        time.strftime("%Y-%m-%d_%H.%M.%S", time.gmtime()))
     if not os.path.exists(model_state_dict_dir):
         os.makedirs(model_state_dict_dir)
 
@@ -74,16 +75,17 @@ def load_data(data_path, data_type="train"):
         return json.load(open(data_path, encoding="utf-8"))
 
 
-
 ent2id_path = os.path.join(config["data_home"], config["exp_name"], config["ent2id"])
 ent2id = load_data(ent2id_path, "ent2id")
 ent_type_size = len(ent2id)
+
+
 def data_generator(data_type="train"):
     """
     读取数据，生成DataLoader。
     """
-       
-    if data_type=="train":
+
+    if data_type == "train":
         train_data_path = os.path.join(config["data_home"], config["exp_name"], config["train_data"])
         train_data = load_data(train_data_path, "train")
         valid_data_path = os.path.join(config["data_home"], config["exp_name"], config["valid_data"])
@@ -92,7 +94,6 @@ def data_generator(data_type="train"):
         valid_data_path = os.path.join(config["data_home"], config["exp_name"], config["valid_data"])
         valid_data = load_data(valid_data_path, "valid")
         train_data = []
-   
 
     all_data = train_data + valid_data
 
@@ -107,38 +108,42 @@ def data_generator(data_type="train"):
     data_maker = DataMaker(tokenizer)
 
     if data_type == "train":
-        train_inputs = data_maker.generate_inputs(train_data, max_seq_len, ent2id)
-        valid_inputs = data_maker.generate_inputs(valid_data, max_seq_len, ent2id)
-        train_dataloader = DataLoader(MyDataset(train_inputs),
-                                        batch_size=hyper_parameters["batch_size"],
-                                        shuffle=True,
-                                        num_workers=config["num_workers"],
-                                        drop_last=False,
-                                        collate_fn=data_maker.generate_batch
-                                        )
-        valid_dataloader = DataLoader(MyDataset(valid_inputs),
-                                        batch_size=hyper_parameters["batch_size"],
-                                        shuffle=True,
-                                        num_workers=config["num_workers"],
-                                        drop_last=False,
-                                        collate_fn=data_maker.generate_batch
-                                        )
+        # train_inputs = data_maker.generate_inputs(train_data, max_seq_len, ent2id)
+        # valid_inputs = data_maker.generate_inputs(valid_data, max_seq_len, ent2id)
+        train_dataloader = DataLoader(MyDataset(train_data),
+                                      batch_size=hyper_parameters["batch_size"],
+                                      shuffle=True,
+                                      num_workers=config["num_workers"],
+                                      drop_last=False,
+                                      collate_fn=lambda x: data_maker.generate_batch(x, max_seq_len, ent2id)
+                                      )
+        valid_dataloader = DataLoader(MyDataset(valid_data),
+                                      batch_size=hyper_parameters["batch_size"],
+                                      shuffle=True,
+                                      num_workers=config["num_workers"],
+                                      drop_last=False,
+                                      collate_fn=lambda x: data_maker.generate_batch(x, max_seq_len, ent2id)
+                                      )
         # for batch in train_dataloader:
         #     print(batch[1].shape)
         #     print(hyper_parameters["batch_size"])
         #     break
         return train_dataloader, valid_dataloader
     elif data_type == "valid":
-        valid_inputs = data_maker.generate_inputs(valid_data, max_seq_len, ent2id)
-        valid_dataloader = DataLoader(MyDataset(valid_inputs),
-                                        batch_size=hyper_parameters["batch_size"],
-                                        shuffle=True,
-                                        num_workers=config["num_workers"],
-                                        drop_last=False,
-                                        )
+        # valid_inputs = data_maker.generate_inputs(valid_data, max_seq_len, ent2id)
+        valid_dataloader = DataLoader(MyDataset(valid_data),
+                                      batch_size=hyper_parameters["batch_size"],
+                                      shuffle=True,
+                                      num_workers=config["num_workers"],
+                                      drop_last=False,
+                                      collate_fn=lambda x: data_maker.generate_batch(x, max_seq_len, ent2id)
+                                      )
         return valid_dataloader
 
+
 metrics = MetricsCalculator()
+
+
 def train_step(batch_train, model, optimizer, criterion):
     # batch_input_ids:(batch_size, seq_len)    batch_labels:(batch_size, ent_type_size, seq_len, seq_len)
     batch_samples, batch_input_ids, batch_attention_mask, batch_token_type_ids, batch_labels = batch_train
@@ -147,19 +152,18 @@ def train_step(batch_train, model, optimizer, criterion):
                                                                                  batch_token_type_ids.to(device),
                                                                                  batch_labels.to(device)
                                                                                  )
-    
-    
+
     logits = model(batch_input_ids, batch_attention_mask, batch_token_type_ids)
 
     loss = criterion(logits, batch_labels)
-    
+
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
 
     sample_precision = metrics.get_sample_precision(logits, batch_labels)
     sample_f1 = metrics.get_sample_f1(logits, batch_labels)
-    
+
     return loss.item(), sample_precision.item(), sample_f1.item()
 
 
@@ -169,6 +173,7 @@ model = model.to(device)
 
 if config["logger"] == "wandb" and config["run_type"] == "train":
     wandb.watch(model)
+
 
 def train(model, dataloader, epoch, optimizer):
     model.train()
@@ -180,12 +185,10 @@ def train(model, dataloader, epoch, optimizer):
         y_pred:(batch_size, ent_type_size, seq_len, seq_len)
         """
         batch_size, ent_type_size = y_pred.shape[:2]
-        y_true = y_true.reshape(batch_size*ent_type_size, -1)
-        y_pred = y_pred.reshape(batch_size*ent_type_size, -1)
+        y_true = y_true.reshape(batch_size * ent_type_size, -1)
+        y_pred = y_pred.reshape(batch_size * ent_type_size, -1)
         loss = multilabel_categorical_crossentropy(y_true, y_pred)
         return loss
-    
-    
 
     # scheduler
     if hyper_parameters["scheduler"] == "CAWR":
@@ -202,7 +205,7 @@ def train(model, dataloader, epoch, optimizer):
     total_loss, total_precision, total_f1 = 0., 0., 0.
     for batch_ind, batch_data in enumerate(dataloader):
 
-        loss, precision,f1 = train_step(batch_data, model, optimizer, loss_fun)
+        loss, precision, f1 = train_step(batch_data, model, optimizer, loss_fun)
 
         total_loss += loss
         total_precision += precision
@@ -214,15 +217,17 @@ def train(model, dataloader, epoch, optimizer):
         avg_precision = total_precision / (batch_ind + 1)
         avg_f1 = total_f1 / (batch_ind + 1)
 
-        print(f'Project:{config["exp_name"]}, Epoch: {epoch+1}/{hyper_parameters["epochs"]}, Batch: {batch_ind+1}/{len(dataloader)}, loss: {avg_loss}, precision: {avg_precision}, f1:{avg_f1}, lr: {optimizer.param_groups[0]["lr"]}')
+        print(
+            f'Project:{config["exp_name"]}, Epoch: {epoch + 1}/{hyper_parameters["epochs"]}, Batch: {batch_ind + 1}/{len(dataloader)}, loss: {avg_loss}, precision: {avg_precision}, f1:{avg_f1}, lr: {optimizer.param_groups[0]["lr"]}')
         if config["logger"] == "wandb" and batch_ind % config["log_interval"] == 0:
-                logger.log({
-                    "epoch": epoch,
-                    "train_loss": avg_loss,
-                    "train_precision": avg_precision,
-                    "train_f1": avg_f1,
-                    "learning_rate": optimizer.param_groups[0]['lr'],
-                })
+            logger.log({
+                "epoch": epoch,
+                "train_loss": avg_loss,
+                "train_precision": avg_precision,
+                "train_f1": avg_f1,
+                "learning_rate": optimizer.param_groups[0]['lr'],
+            })
+
 
 def valid_step(batch_valid, model):
     batch_samples, batch_input_ids, batch_attention_mask, batch_token_type_ids, batch_labels = batch_valid
@@ -234,8 +239,9 @@ def valid_step(batch_valid, model):
     with torch.no_grad():
         logits = model(batch_input_ids, batch_attention_mask, batch_token_type_ids)
     sample_f1, sample_precision, sample_recall = metrics.get_evaluate_fpr(logits, batch_labels)
-    
+
     return sample_f1, sample_precision, sample_recall
+
 
 def valid(model, dataloader):
     model.eval()
@@ -255,8 +261,9 @@ def valid(model, dataloader):
     print(f'avg_precision: {avg_precision}, avg_recall: {avg_recall}, avg_f1: {avg_f1}')
     print("******************************************")
     if config["logger"] == "wandb":
-        logger.log({"valid_precision":avg_precision, "valid_recall":avg_recall, "valid_f1":avg_f1})
+        logger.log({"valid_precision": avg_precision, "valid_recall": avg_recall, "valid_f1": avg_f1})
     return avg_f1
+
 
 if __name__ == '__main__':
     if config["run_type"] == "train":
@@ -265,7 +272,7 @@ if __name__ == '__main__':
         # optimizer
         init_learning_rate = float(hyper_parameters["lr"])
         optimizer = torch.optim.Adam(model.parameters(), lr=init_learning_rate)
-        
+
         max_f1 = 0.
         for epoch in range(hyper_parameters["epochs"]):
             train(model, train_dataloader, epoch, optimizer)
@@ -275,7 +282,7 @@ if __name__ == '__main__':
                 if valid_f1 > config["f1_2_save"]:  # save the best model
                     modle_state_num = len(glob.glob(model_state_dict_dir + "/model_state_dict_*.pt"))
                     torch.save(model.state_dict(),
-                            os.path.join(model_state_dict_dir, "model_state_dict_{}.pt".format(modle_state_num)))
+                               os.path.join(model_state_dict_dir, "model_state_dict_{}.pt".format(modle_state_num)))
             print(f"Best F1: {max_f1}")
             print("******************************************")
             if config["logger"] == "wandb":
