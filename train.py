@@ -102,7 +102,8 @@ def data_generator(data_type="train"):
     for sample in all_data:
         tokens = tokenizer(sample["text"])["input_ids"]
         max_tok_num = max(max_tok_num, len(tokens))
-    assert max_tok_num <= hyper_parameters["max_seq_len"], f'数据文本最大token数量{max_tok_num}超过预设{hyper_parameters["max_seq_len"]}'
+    assert max_tok_num <= hyper_parameters[
+        "max_seq_len"], f'数据文本最大token数量{max_tok_num}超过预设{hyper_parameters["max_seq_len"]}'
     max_seq_len = min(max_tok_num, hyper_parameters["max_seq_len"])
 
     data_maker = DataMaker(tokenizer)
@@ -161,10 +162,7 @@ def train_step(batch_train, model, optimizer, criterion):
     loss.backward()
     optimizer.step()
 
-    sample_precision = metrics.get_sample_precision(logits, batch_labels)
-    sample_f1 = metrics.get_sample_f1(logits, batch_labels)
-
-    return loss.item(), sample_precision.item(), sample_f1.item()
+    return loss.item()
 
 
 encoder = BertModel.from_pretrained(config["bert_path"])
@@ -202,29 +200,24 @@ def train(model, dataloader, epoch, optimizer):
         decay_steps = hyper_parameters["decay_steps"]
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=decay_steps, gamma=decay_rate)
 
-    total_loss, total_precision, total_f1 = 0., 0., 0.
-    for batch_ind, batch_data in enumerate(dataloader):
+    pbar = tqdm(enumerate(dataloader), total=len(dataloader))
+    total_loss = 0.
+    for batch_ind, batch_data in pbar:
 
-        loss, precision, f1 = train_step(batch_data, model, optimizer, loss_fun)
+        loss = train_step(batch_data, model, optimizer, loss_fun)
 
         total_loss += loss
-        total_precision += precision
-        total_f1 += f1
 
         avg_loss = total_loss / (batch_ind + 1)
         scheduler.step()
 
-        avg_precision = total_precision / (batch_ind + 1)
-        avg_f1 = total_f1 / (batch_ind + 1)
+        pbar.set_description(f'Project:{config["exp_name"]}, Epoch: {epoch + 1}/{hyper_parameters["epochs"]}, Step: {batch_ind + 1}/{len(dataloader)}')
+        pbar.set_postfix(loss=avg_loss, lr=optimizer.param_groups[0]["lr"])
 
-        print(
-            f'Project:{config["exp_name"]}, Epoch: {epoch + 1}/{hyper_parameters["epochs"]}, Batch: {batch_ind + 1}/{len(dataloader)}, loss: {avg_loss}, precision: {avg_precision}, f1:{avg_f1}, lr: {optimizer.param_groups[0]["lr"]}')
         if config["logger"] == "wandb" and batch_ind % config["log_interval"] == 0:
             logger.log({
                 "epoch": epoch,
                 "train_loss": avg_loss,
-                "train_precision": avg_precision,
-                "train_f1": avg_f1,
                 "learning_rate": optimizer.param_groups[0]['lr'],
             })
 
@@ -280,9 +273,9 @@ if __name__ == '__main__':
             if valid_f1 > max_f1:
                 max_f1 = valid_f1
                 if valid_f1 > config["f1_2_save"]:  # save the best model
-                    modle_state_num = len(glob.glob(model_state_dict_dir + "/model_state_dict_*.pt"))
+                    model_state_num = len(glob.glob(model_state_dict_dir + "/model_state_dict_*.pt"))
                     torch.save(model.state_dict(),
-                               os.path.join(model_state_dict_dir, "model_state_dict_{}.pt".format(modle_state_num)))
+                               os.path.join(model_state_dict_dir, "model_state_dict_{}.pt".format(model_state_num)))
             print(f"Best F1: {max_f1}")
             print("******************************************")
             if config["logger"] == "wandb":
