@@ -38,7 +38,7 @@ if config["logger"] == "wandb" and config["run_type"] == "train":
 
     model_state_dict_dir = wandb.run.dir
     logger = wandb
-else:
+elif config["run_type"] == "train":
     model_state_dict_dir = os.path.join(config["path_to_save_model"], config["exp_name"],
                                         time.strftime("%Y-%m-%d_%H.%M.%S", time.gmtime()))
     if not os.path.exists(model_state_dict_dir):
@@ -160,7 +160,7 @@ def train_step(batch_train, model, optimizer, criterion):
 
     logits = model(batch_input_ids, batch_attention_mask, batch_token_type_ids)
 
-    loss = criterion(logits, batch_labels)
+    loss = criterion(batch_labels, logits)
 
     optimizer.zero_grad()
     loss.backward()
@@ -203,6 +203,8 @@ def train(model, dataloader, epoch, optimizer):
         decay_rate = hyper_parameters["decay_rate"]
         decay_steps = hyper_parameters["decay_steps"]
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=decay_steps, gamma=decay_rate)
+    else:
+        scheduler = None
 
     pbar = tqdm(enumerate(dataloader), total=len(dataloader))
     total_loss = 0.
@@ -213,7 +215,8 @@ def train(model, dataloader, epoch, optimizer):
         total_loss += loss
 
         avg_loss = total_loss / (batch_ind + 1)
-        scheduler.step()
+        if scheduler is not None:
+            scheduler.step()
 
         pbar.set_description(
             f'Project:{config["exp_name"]}, Epoch: {epoch + 1}/{hyper_parameters["epochs"]}, Step: {batch_ind + 1}/{len(dataloader)}')

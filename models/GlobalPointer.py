@@ -56,7 +56,7 @@ class DataMaker(object):
             )
 
             labels = None
-            if data_type != "test":
+            if data_type != "predict":
                 ent2token_spans = self.preprocessor.get_ent2token_spans(
                     sample["text"], sample["entity_list"]
                 )
@@ -89,13 +89,13 @@ class DataMaker(object):
             input_ids_list.append(sample[1])
             attention_mask_list.append(sample[2])
             token_type_ids_list.append(sample[3])
-            if data_type != "test":
+            if data_type != "predict":
                 labels_list.append(sample[4])
 
         batch_input_ids = torch.stack(input_ids_list, dim=0)
         batch_attention_mask = torch.stack(attention_mask_list, dim=0)
         batch_token_type_ids = torch.stack(token_type_ids_list, dim=0)
-        batch_labels = torch.stack(labels_list, dim=0) if data_type != "test" else None
+        batch_labels = torch.stack(labels_list, dim=0) if data_type != "predict" else None
 
         return sample_list, batch_input_ids, batch_attention_mask, batch_token_type_ids, batch_labels
 
@@ -173,7 +173,7 @@ class GlobalPointer(nn.Module):
         # outputs:(batch_size, seq_len, ent_type_size, inner_dim*2)
         outputs = torch.stack(outputs, dim=-2)
         # qw,kw:(batch_size, seq_len, ent_type_size, inner_dim)
-        qw, kw = outputs[..., :self.inner_dim], outputs[..., self.inner_dim:]  # TODO:修改为Linear获取？
+        qw, kw = outputs[..., :self.inner_dim], outputs[..., self.inner_dim:]
 
         if self.RoPE:
             # pos_emb:(batch_size, seq_len, inner_dim)

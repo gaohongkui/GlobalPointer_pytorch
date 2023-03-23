@@ -1,9 +1,3 @@
-<!--
- * @Date: 2021-06-24 15:57:09
- * @LastEditors: GodK
- * @LastEditTime: 2021-07-27 22:33:36
--->
-
 # GlobalPointer_pytorch
 
 > 喜欢本项目的话，欢迎点击右上角的star，感谢每一个点赞的你。
@@ -66,4 +60,3 @@ python evaluate.py
 默认配置（超参数已在 `config.py` 文件中），数据集是 CLUENER
 
 * 验证集 Best F1：0.7966
-* 测试集 F1：

@@ -6,7 +6,7 @@ LastEditTime: 2021-07-31 19:30:18
 import torch
 
 
-def multilabel_categorical_crossentropy(y_pred, y_true):
+def multilabel_categorical_crossentropy(y_true, y_pred):
     """
     https://kexue.fm/archives/7359
     """

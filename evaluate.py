@@ -26,8 +26,8 @@ torch.backends.cudnn.deterministic = True
 tokenizer = BertTokenizerFast.from_pretrained(config["bert_path"], add_special_tokens=True, do_lower_case=False)
 
 
-def load_data(data_path, data_type="test"):
-    if data_type == "test":
+def load_data(data_path, data_type="predict"):
+    if data_type == "predict":
         datas = []
         with open(data_path, encoding="utf-8") as f:
             for line in f:
@@ -43,16 +43,16 @@ ent2id = load_data(ent2id_path, "ent2id")
 ent_type_size = len(ent2id)
 
 
-def data_generator(data_type="test"):
+def data_generator(data_type="predict"):
     """
     读取数据，生成DataLoader。
     """
 
-    if data_type == "test":
-        test_data_path = os.path.join(config["data_home"], config["exp_name"], config["test_data"])
-        test_data = load_data(test_data_path, "test")
+    if data_type == "predict":
+        predict_data_path = os.path.join(config["data_home"], config["exp_name"], config["predict_data"])
+        predict_data = load_data(predict_data_path, "predict")
 
-    all_data = test_data
+    all_data = predict_data
 
     # TODO:句子截取
     max_tok_num = 0
@@ -65,17 +65,16 @@ def data_generator(data_type="test"):
 
     data_maker = DataMaker(tokenizer)
 
-    if data_type == "test":
-        # test_inputs = data_maker.generate_inputs(test_data, max_seq_len, ent2id, data_type="test")
-        test_dataloader = DataLoader(MyDataset(test_data),
+    if data_type == "predict":
+        predict_dataloader = DataLoader(MyDataset(predict_data),
                                      batch_size=hyper_parameters["batch_size"],
                                      shuffle=False,
                                      num_workers=config["num_workers"],
                                      drop_last=False,
                                      collate_fn=lambda x: data_maker.generate_batch(x, max_seq_len, ent2id,
-                                                                                    data_type="test")
+                                                                                    data_type="predict")
                                      )
-        return test_dataloader
+        return predict_dataloader
 
 
 def decode_ent(text, pred_matrix, tokenizer, threshold=0):
@@ -137,11 +136,11 @@ def load_model():
 
 
 def evaluate():
-    test_dataloader = data_generator(data_type="test")
+    predict_dataloader = data_generator(data_type="predict")
 
     model = load_model()
 
-    predict_res = predict(test_dataloader, model)
+    predict_res = predict(predict_dataloader, model)
 
     if not os.path.exists(os.path.join(config["save_res_dir"], config["exp_name"])):
         os.mkdir(os.path.join(config["save_res_dir"], config["exp_name"]))
