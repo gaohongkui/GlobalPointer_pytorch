@@ -50,7 +50,8 @@ class Preprocessor(object):
             token_end_indexs = [i for i, v in enumerate(text2tokens) if v == ent2token[-1]]
 
             token_start_index = list(filter(lambda x: token2char_span_mapping[x][0] == ent_span[0], token_start_indexs))
-            token_end_index = list(filter(lambda x: token2char_span_mapping[x][-1] - 1 == ent_span[1], token_end_indexs))  # token2char_span_mapping[x][-1]-1 减1是因为原始的char_span是闭区间，而token2char_span是开区间
+            token_end_index = list(filter(lambda x: token2char_span_mapping[x][-1] - 1 == ent_span[1],
+                                          token_end_indexs))  # token2char_span_mapping[x][-1]-1 减1是因为原始的char_span是闭区间，而token2char_span是开区间
 
             if len(token_start_index) == 0 or len(token_end_index) == 0:
                 # print(f'[{ent}] 无法对应到 [{text}] 的token_span，已丢弃')

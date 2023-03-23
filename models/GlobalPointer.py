@@ -25,7 +25,7 @@ class MyDataset(Dataset):
 
 
 class DataMaker(object):
-    def __init__(self, tokenizer, add_special_tokens = True):
+    def __init__(self, tokenizer, add_special_tokens=True):
         super().__init__()
         self.tokenizer = tokenizer
         self.add_special_tokens = add_special_tokens
@@ -75,15 +75,15 @@ class DataMaker(object):
 
             all_inputs.append(sample_input)
         return all_inputs
-    
-    def generate_batch(self, batch_data, max_seq_len, ent2id, data_type="train",):
+
+    def generate_batch(self, batch_data, max_seq_len, ent2id, data_type="train"):
         batch_data = self.generate_inputs(batch_data, max_seq_len, ent2id, data_type)
         sample_list = []
         input_ids_list = []
         attention_mask_list = []
         token_type_ids_list = []
         labels_list = []
-        
+
         for sample in batch_data:
             sample_list.append(sample[0])
             input_ids_list.append(sample[1])
@@ -91,37 +91,38 @@ class DataMaker(object):
             token_type_ids_list.append(sample[3])
             if data_type != "test":
                 labels_list.append(sample[4])
-        
+
         batch_input_ids = torch.stack(input_ids_list, dim=0)
         batch_attention_mask = torch.stack(attention_mask_list, dim=0)
         batch_token_type_ids = torch.stack(token_type_ids_list, dim=0)
-        batch_labels = torch.stack(labels_list, dim=0) if data_type!="test" else None
-        
+        batch_labels = torch.stack(labels_list, dim=0) if data_type != "test" else None
+
         return sample_list, batch_input_ids, batch_attention_mask, batch_token_type_ids, batch_labels
-    
+
     def decode_ent(self, pred_matrix):
         pass
+
 
 class MetricsCalculator(object):
     def __init__(self):
         super().__init__()
-    
+
     def get_sample_f1(self, y_pred, y_true):
         y_pred = torch.gt(y_pred, 0).float()
         return 2 * torch.sum(y_true * y_pred) / torch.sum(y_true + y_pred)
-    
+
     def get_sample_precision(self, y_pred, y_true):
         y_pred = torch.gt(y_pred, 0).float()
-        return torch.sum(y_pred[y_true == 1]) / (y_pred.sum()+1)
-    
+        return torch.sum(y_pred[y_true == 1]) / (y_pred.sum() + 1)
+
     def get_evaluate_fpr(self, y_pred, y_true):
         y_pred = y_pred.cpu().numpy()
         y_true = y_true.cpu().numpy()
         pred = []
         true = []
-        for b, l, start, end in zip(*np.where(y_pred>0)):
+        for b, l, start, end in zip(*np.where(y_pred > 0)):
             pred.append((b, l, start, end))
-        for b, l, start, end in zip(*np.where(y_true>0)):
+        for b, l, start, end in zip(*np.where(y_true > 0)):
             true.append((b, l, start, end))
 
         R = set(pred)
@@ -131,8 +132,6 @@ class MetricsCalculator(object):
         Z = len(T)
         f1, precision, recall = 2 * X / (Y + Z), X / Y, X / Z
         return f1, precision, recall
-    
-    
 
 
 class GlobalPointer(nn.Module):
@@ -145,8 +144,7 @@ class GlobalPointer(nn.Module):
         self.dense = nn.Linear(self.hidden_size, self.ent_type_size * self.inner_dim * 2)
 
         self.RoPE = RoPE
-    
-    
+
     def sinusoidal_position_embedding(self, batch_size, seq_len, output_dim):
         position_ids = torch.arange(0, seq_len, dtype=torch.float).unsqueeze(-1)
 
@@ -154,14 +152,14 @@ class GlobalPointer(nn.Module):
         indices = torch.pow(10000, -2 * indices / output_dim)
         embeddings = position_ids * indices
         embeddings = torch.stack([torch.sin(embeddings), torch.cos(embeddings)], dim=-1)
-        embeddings = embeddings.repeat((batch_size, *([1]*len(embeddings.shape))))
+        embeddings = embeddings.repeat((batch_size, *([1] * len(embeddings.shape))))
         embeddings = torch.reshape(embeddings, (batch_size, seq_len, output_dim))
         embeddings = embeddings.to(self.device)
         return embeddings
-        
+
     def forward(self, input_ids, attention_mask, token_type_ids):
         self.device = input_ids.device
-        
+
         context_outputs = self.encoder(input_ids, attention_mask, token_type_ids)
         # last_hidden_state:(batch_size, seq_len, hidden_size)
         last_hidden_state = context_outputs[0]
@@ -175,21 +173,21 @@ class GlobalPointer(nn.Module):
         # outputs:(batch_size, seq_len, ent_type_size, inner_dim*2)
         outputs = torch.stack(outputs, dim=-2)
         # qw,kw:(batch_size, seq_len, ent_type_size, inner_dim)
-        qw, kw = outputs[...,:self.inner_dim], outputs[...,self.inner_dim:] # TODO:修改为Linear获取？
+        qw, kw = outputs[..., :self.inner_dim], outputs[..., self.inner_dim:]  # TODO:修改为Linear获取？
 
         if self.RoPE:
             # pos_emb:(batch_size, seq_len, inner_dim)
             pos_emb = self.sinusoidal_position_embedding(batch_size, seq_len, self.inner_dim)
             # cos_pos,sin_pos: (batch_size, seq_len, 1, inner_dim)
             cos_pos = pos_emb[..., None, 1::2].repeat_interleave(2, dim=-1)
-            sin_pos = pos_emb[..., None,::2].repeat_interleave(2, dim=-1)
-            qw2 = torch.stack([-qw[..., 1::2], qw[...,::2]], -1)
+            sin_pos = pos_emb[..., None, ::2].repeat_interleave(2, dim=-1)
+            qw2 = torch.stack([-qw[..., 1::2], qw[..., ::2]], -1)
             qw2 = qw2.reshape(qw.shape)
             qw = qw * cos_pos + qw2 * sin_pos
-            kw2 = torch.stack([-kw[..., 1::2], kw[...,::2]], -1)
+            kw2 = torch.stack([-kw[..., 1::2], kw[..., ::2]], -1)
             kw2 = kw2.reshape(kw.shape)
             kw = kw * cos_pos + kw2 * sin_pos
-            
+
         # logits:(batch_size, ent_type_size, seq_len, seq_len)
         logits = torch.einsum('bmhd,bnhd->bhmn', qw, kw)
 
@@ -197,13 +195,10 @@ class GlobalPointer(nn.Module):
         pad_mask = attention_mask.unsqueeze(1).unsqueeze(1).expand(batch_size, self.ent_type_size, seq_len, seq_len)
         # pad_mask_h = attention_mask.unsqueeze(1).unsqueeze(-1).expand(batch_size, self.ent_type_size, seq_len, seq_len)
         # pad_mask = pad_mask_v&pad_mask_h
-        logits = logits*pad_mask - (1-pad_mask)*1e12
+        logits = logits * pad_mask - (1 - pad_mask) * 1e12
 
         # 排除下三角
-        mask = torch.tril(torch.ones_like(logits), -1) 
+        mask = torch.tril(torch.ones_like(logits), -1)
         logits = logits - mask * 1e12
-        
 
-        
-        return logits/self.inner_dim**0.5
-
+        return logits / self.inner_dim ** 0.5

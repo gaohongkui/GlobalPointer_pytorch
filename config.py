@@ -9,7 +9,7 @@ common = {
     "encoder": "BERT",
     "data_home": "./datasets",
     "bert_path": "./pretrained_models/bert-base-chinese",  # bert-base-cased， bert-base-chinese
-    "run_type": "train",  # train,eval
+    "run_type": "train",  # train, eval
     "f1_2_save": 0.5,  # 存模型的最低f1值
     "logger": "default"  # wandb or default，default意味着只输出日志到控制台
 }
@@ -23,6 +23,7 @@ wandb_config = {
 train_config = {
     "train_data": "train.json",
     "valid_data": "dev.json",
+    "test_data": "test.json",
     "ent2id": "ent2id.json",
     "path_to_save_model": "./outputs",  # 在logger不是wandb时生效
     "hyper_parameters": {

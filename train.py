@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 import glob
 import wandb
-from evaluate import evaluate
+from evaluate import load_model
 import time
 
 config = config.train_config
@@ -94,6 +94,10 @@ def data_generator(data_type="train"):
         valid_data_path = os.path.join(config["data_home"], config["exp_name"], config["valid_data"])
         valid_data = load_data(valid_data_path, "valid")
         train_data = []
+    elif data_type == "test":
+        valid_data_path = os.path.join(config["data_home"], config["exp_name"], config["test_data"])
+        valid_data = load_data(valid_data_path, "valid")
+        train_data = []
 
     all_data = train_data + valid_data
 
@@ -130,7 +134,7 @@ def data_generator(data_type="train"):
         #     print(hyper_parameters["batch_size"])
         #     break
         return train_dataloader, valid_dataloader
-    elif data_type == "valid":
+    else:
         # valid_inputs = data_maker.generate_inputs(valid_data, max_seq_len, ent2id)
         valid_dataloader = DataLoader(MyDataset(valid_data),
                                       batch_size=hyper_parameters["batch_size"],
@@ -211,7 +215,8 @@ def train(model, dataloader, epoch, optimizer):
         avg_loss = total_loss / (batch_ind + 1)
         scheduler.step()
 
-        pbar.set_description(f'Project:{config["exp_name"]}, Epoch: {epoch + 1}/{hyper_parameters["epochs"]}, Step: {batch_ind + 1}/{len(dataloader)}')
+        pbar.set_description(
+            f'Project:{config["exp_name"]}, Epoch: {epoch + 1}/{hyper_parameters["epochs"]}, Step: {batch_ind + 1}/{len(dataloader)}')
         pbar.set_postfix(loss=avg_loss, lr=optimizer.param_groups[0]["lr"])
 
         if config["logger"] == "wandb" and batch_ind % config["log_interval"] == 0:
@@ -281,4 +286,7 @@ if __name__ == '__main__':
             if config["logger"] == "wandb":
                 logger.log({"Best_F1": max_f1})
     elif config["run_type"] == "eval":
-        evaluate()
+        # 此处的 eval 是为了评估测试集的 p r f1（如果测试集有标签的情况），无标签预测使用 evaluate.py
+        model = load_model()
+        test_dataloader = data_generator(data_type="test")
+        valid(model, test_dataloader)

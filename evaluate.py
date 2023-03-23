@@ -59,7 +59,8 @@ def data_generator(data_type="test"):
     for sample in all_data:
         tokens = tokenizer.tokenize(sample["text"])
         max_tok_num = max(max_tok_num, len(tokens))
-    assert max_tok_num <= hyper_parameters["max_seq_len"], f'数据文本最大token数量{max_tok_num}超过预设{hyper_parameters["max_seq_len"]}'
+    assert max_tok_num <= hyper_parameters[
+        "max_seq_len"], f'数据文本最大token数量{max_tok_num}超过预设{hyper_parameters["max_seq_len"]}'
     max_seq_len = min(max_tok_num, hyper_parameters["max_seq_len"])
 
     data_maker = DataMaker(tokenizer)
